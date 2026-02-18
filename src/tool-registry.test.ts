@@ -32,7 +32,7 @@ describe("ToolRegistry", () => {
     expect(tools).toContain("send-message");
     expect(tools).toContain("spawn-agent");
     expect(tools).toContain("create-tool");
-    expect(tools).toHaveLength(9);
+    expect(tools).toHaveLength(10);
   });
 
   test("getToolDefinitions filters by tool names", () => {
@@ -234,6 +234,6 @@ describe("ToolRegistry", () => {
 
     // No registry.json exists — should not throw
     await registry.scanDynamic(tmpDir);
-    expect(registry.listTools()).toHaveLength(9); // just builtins
+    expect(registry.listTools()).toHaveLength(10); // just builtins
   });
 });

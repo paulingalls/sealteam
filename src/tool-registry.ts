@@ -17,6 +17,7 @@ import * as gitTool from "./tools/git.ts";
 import * as sendMessageTool from "./tools/send-message.ts";
 import * as spawnAgentTool from "./tools/spawn-agent.ts";
 import * as createToolTool from "./tools/create-tool.ts";
+import * as parseCsvTool from "./tools/parse-csv.ts";
 
 /** Names of tools that are handled server-side by the Claude API. */
 const SERVER_TOOL_NAMES = new Set(["web-search", "web-fetch"]);
@@ -60,6 +61,7 @@ export class ToolRegistry {
     this.builtinTools.set("send-message", sendMessageTool);
     this.builtinTools.set("spawn-agent", spawnAgentTool);
     this.builtinTools.set("create-tool", createToolTool);
+    this.builtinTools.set("parse-csv", parseCsvTool);
   }
 
   /**
@@ -114,6 +116,12 @@ export class ToolRegistry {
         handler: spawnAgentTool.createHandler(params.spawnContext),
       });
     }
+
+    // Bind parse-csv to agent's working directory
+    this.builtinTools.set("parse-csv", {
+      definition: parseCsvTool.definition,
+      handler: parseCsvTool.createHandler(params.workDir),
+    });
 
     // Bind create-tool to workspace and this registry
     this.builtinTools.set("create-tool", {
