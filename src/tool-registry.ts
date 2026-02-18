@@ -71,6 +71,24 @@ export class ToolRegistry {
     workspacePath: string;
     spawnContext?: SpawnContext;
   }): void {
+    // Bind bash tool to agent's working directory
+    this.builtinTools.set("bash", {
+      definition: bashTool.definition,
+      handler: bashTool.createHandler(params.workDir),
+    });
+
+    // Bind read-file to agent's working directory
+    this.builtinTools.set("read-file", {
+      definition: readFileTool.definition,
+      handler: readFileTool.createHandler(params.workDir),
+    });
+
+    // Bind write-file to agent's working directory
+    this.builtinTools.set("write-file", {
+      definition: writeFileTool.definition,
+      handler: writeFileTool.createHandler(params.workDir),
+    });
+
     // Bind git tool to agent's working directory
     this.builtinTools.set("git", {
       definition: gitTool.definition,

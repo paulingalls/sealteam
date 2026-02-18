@@ -1,6 +1,7 @@
 import { test, expect, describe, beforeEach, afterEach } from "bun:test";
 import { ToolRegistry } from "./tool-registry.ts";
 import { MessageQueue } from "./message-queue.ts";
+import { MockRedis } from "./mock-redis.ts";
 
 let tmpDir: string;
 let mq: MessageQueue;
@@ -8,7 +9,7 @@ let mq: MessageQueue;
 beforeEach(async () => {
   tmpDir = `/tmp/sealteam-registry-test-${crypto.randomUUID()}`;
   await Bun.$`mkdir -p ${tmpDir}/tools`.quiet();
-  mq = new MessageQueue("valkey://localhost:6379");
+  mq = new MessageQueue(new MockRedis());
 });
 
 afterEach(async () => {

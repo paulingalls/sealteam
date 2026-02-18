@@ -30,6 +30,17 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
+  // Kill any spawned agent processes before cleanup
+  const session = await readSessionState(tmpDir);
+  if (session) {
+    for (const agent of session.agents) {
+      try {
+        process.kill(agent.pid, "SIGKILL");
+      } catch {
+        // Already dead
+      }
+    }
+  }
   await Bun.$`rm -rf ${tmpDir}`.quiet();
 });
 
@@ -50,9 +61,6 @@ describe("spawn-agent tool", () => {
 
     const handler = createHandler(ctx);
 
-    // Use a trivial script that exits immediately instead of life-loop
-    // The spawn will succeed but the process will exit quickly since
-    // src/life-loop.ts doesn't exist yet
     const result = await handler({
       name: "alice",
       role: "backend engineer",
@@ -136,7 +144,7 @@ describe("spawn-agent tool", () => {
     };
 
     const handler = createHandler(ctx);
-    await handler({
+    const result = await handler({
       name: "charlie",
       role: "writer",
       purpose: "Write docs",

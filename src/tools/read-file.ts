@@ -1,3 +1,4 @@
+import { resolve } from "node:path";
 import type { ToolDefinition } from "../types.ts";
 
 export const definition: ToolDefinition = {
@@ -16,10 +17,22 @@ export const definition: ToolDefinition = {
   },
 };
 
+/**
+ * Create a handler bound to a default working directory.
+ * Relative paths are resolved against workDir.
+ */
+export function createHandler(workDir: string) {
+  return (input: Record<string, unknown>) => handler(input, workDir);
+}
+
 export async function handler(
   input: Record<string, unknown>,
+  workDir?: string,
 ): Promise<string> {
-  const path = input.path as string;
+  let path = input.path as string;
+  if (workDir && !path.startsWith("/")) {
+    path = resolve(workDir, path);
+  }
   try {
     const file = Bun.file(path);
     if (!(await file.exists())) {

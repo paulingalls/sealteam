@@ -1,5 +1,6 @@
 import { test, expect, beforeEach, afterEach, describe } from "bun:test";
 import { MessageQueue } from "./message-queue.ts";
+import { MockRedis } from "./mock-redis.ts";
 import { writeSessionState } from "./state-manager.ts";
 import type { QueueMessage, SessionState, AgentConfig } from "./types.ts";
 
@@ -44,7 +45,7 @@ function makeAgentConfig(name: string): AgentConfig {
 beforeEach(async () => {
   tmpDir = `/tmp/sealteam-mq-test-${crypto.randomUUID()}`;
   await Bun.$`mkdir -p ${tmpDir}`.quiet();
-  mq = new MessageQueue("valkey://localhost:6379");
+  mq = new MessageQueue(new MockRedis());
 });
 
 afterEach(async () => {
@@ -188,5 +189,26 @@ describe("shared fan-out", () => {
     expect(mq.send(msg, "/tmp/nonexistent-dir")).rejects.toThrow(
       "session.json not found",
     );
+  });
+});
+
+describe("flushAll", () => {
+  test("removes all queue keys", async () => {
+    await mq.send(makeMessage("bob", "alice", "msg1"));
+    await mq.send(makeMessage("bob", "charlie", "msg2"));
+
+    const flushed = await mq.flushAll();
+    expect(flushed).toBe(2);
+
+    // Queues should be empty
+    const aliceMsg = await mq.receiveNonBlocking(agentName("alice"));
+    const charlieMsg = await mq.receiveNonBlocking(agentName("charlie"));
+    expect(aliceMsg).toBeNull();
+    expect(charlieMsg).toBeNull();
+  });
+
+  test("returns 0 when no queues exist", async () => {
+    const flushed = await mq.flushAll();
+    expect(flushed).toBe(0);
   });
 });

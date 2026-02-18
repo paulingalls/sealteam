@@ -158,8 +158,12 @@ export async function main(options: CLIOptions): Promise<void> {
   // 2. Create workspace directories
   await Bun.$`mkdir -p ${workspace}/logs`.quiet();
 
-  // 3. Init Valkey
+  // 3. Init Valkey and flush stale queues from previous runs
   const mq = new MessageQueue(valkeyUrl);
+  const flushedCount = await mq.flushAll();
+  if (flushedCount > 0) {
+    logMainMessage("main", "cleanup", `flushed ${flushedCount} stale queue(s) from previous run`);
+  }
 
   // 4. Init git repo for leader (bob)
   const bobDir = `${workspace}/bob`;
@@ -223,39 +227,62 @@ export async function main(options: CLIOptions): Promise<void> {
     shuttingDown = true;
     logShutdown(signal);
 
-    // Send cancel to all running agents
+    // Collect all PIDs to kill: tracked processes + any from session.json
+    const pidsToKill = new Set<number>();
+
+    // 1. Kill all tracked agent processes immediately with SIGTERM
     for (const ap of agentProcesses) {
       try {
-        await mq.send({
-          id: crypto.randomUUID(),
-          from: "main",
-          to: ap.config.name,
-          type: "cancel",
-          content: `Shutdown requested (${signal})`,
-          timestamp: Date.now(),
-        });
+        pidsToKill.add(ap.proc.pid);
+        ap.proc.kill("SIGTERM");
       } catch {
-        // Best effort
+        // Already dead
       }
     }
 
-    // Wait up to 10s for graceful exit
+    // 2. Read session.json for leader-spawned agents we might not be tracking
+    const currentSession = await readSessionState(workspace);
+    if (currentSession) {
+      for (const agent of currentSession.agents) {
+        if (agent.status === "running" && !pidsToKill.has(agent.pid)) {
+          try {
+            process.kill(agent.pid, "SIGTERM");
+            pidsToKill.add(agent.pid);
+          } catch {
+            // Already dead
+          }
+        }
+      }
+    }
+
+    logMainMessage("main", "shutdown", `sent SIGTERM to ${pidsToKill.size} processes`);
+
+    // 3. Wait up to 5s for graceful exit, then SIGKILL everything
     const timeout = setTimeout(() => {
-      console.log("Forcing shutdown...");
-      for (const ap of agentProcesses) {
+      logMainMessage("main", "shutdown", "grace period expired, sending SIGKILL");
+      for (const pid of pidsToKill) {
         try {
-          ap.proc.kill();
+          process.kill(pid, "SIGKILL");
         } catch {
           // Already dead
         }
       }
-    }, 10000);
+    }, 5000);
 
-    // Wait for all processes to exit
+    // Wait for tracked processes to exit
     await Promise.allSettled(
       agentProcesses.map((ap) => ap.proc.exited),
     );
     clearTimeout(timeout);
+
+    // Final SIGKILL sweep for any survivors (leader-spawned agents)
+    for (const pid of pidsToKill) {
+      try {
+        process.kill(pid, "SIGKILL");
+      } catch {
+        // Already dead
+      }
+    }
 
     // Update session state
     const finalSession = await readSessionState(workspace);
@@ -521,19 +548,37 @@ async function runRecovery(options: CLIOptions): Promise<void> {
   const shutdown = async () => {
     if (shuttingDown) return;
     shuttingDown = true;
+    logShutdown("SIGNAL");
+
+    // Kill all tracked processes
+    const pidsToKill = new Set<number>();
     for (const ap of agentProcesses) {
       try {
-        await mq.send({
-          id: crypto.randomUUID(),
-          from: "main",
-          to: ap.config.name,
-          type: "cancel",
-          content: "Shutdown requested",
-          timestamp: Date.now(),
-        });
-      } catch { /* best effort */ }
+        pidsToKill.add(ap.proc.pid);
+        ap.proc.kill("SIGTERM");
+      } catch { /* already dead */ }
     }
-    setTimeout(() => process.exit(1), 10000);
+
+    // Also kill any from session.json
+    const shutdownSession = await readSessionState(workspace);
+    if (shutdownSession) {
+      for (const agent of shutdownSession.agents) {
+        if (agent.status === "running" && !pidsToKill.has(agent.pid)) {
+          try {
+            process.kill(agent.pid, "SIGTERM");
+            pidsToKill.add(agent.pid);
+          } catch { /* already dead */ }
+        }
+      }
+    }
+
+    // Force kill after 5s grace period
+    setTimeout(() => {
+      for (const pid of pidsToKill) {
+        try { process.kill(pid, "SIGKILL"); } catch { /* already dead */ }
+      }
+      process.exit(1);
+    }, 5000);
   };
   process.on("SIGINT", () => shutdown());
   process.on("SIGTERM", () => shutdown());

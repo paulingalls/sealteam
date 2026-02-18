@@ -14,11 +14,28 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-export class MessageQueue {
-  private redis: RedisClient;
+/**
+ * Minimal interface for the Redis operations MessageQueue uses.
+ * Allows injecting a mock for testing without a live Valkey connection.
+ */
+export interface RedisLike {
+  lpush(key: string, value: string): Promise<number>;
+  brpop(key: string, timeout: number): Promise<[string, string] | null>;
+  rpop(key: string): Promise<string | null>;
+  keys(pattern: string): Promise<string[]>;
+  del(key: string): Promise<number>;
+  close(): void;
+}
 
-  constructor(valkeyUrl?: string) {
-    this.redis = new RedisClient(valkeyUrl);
+export class MessageQueue {
+  private redis: RedisLike;
+
+  constructor(valkeyUrlOrClient?: string | RedisLike) {
+    if (typeof valkeyUrlOrClient === "object" && valkeyUrlOrClient !== null) {
+      this.redis = valkeyUrlOrClient;
+    } else {
+      this.redis = new RedisClient(valkeyUrlOrClient) as unknown as RedisLike;
+    }
   }
 
   /**
@@ -108,6 +125,21 @@ export class MessageQueue {
       const result = await this.redis.rpop(key);
       if (!result) return null;
       return JSON.parse(result) as QueueMessage;
+    });
+  }
+
+  /**
+   * Delete all queue:* keys to prevent stale messages from previous runs.
+   * Should be called at session startup before sending any messages.
+   */
+  async flushAll(): Promise<number> {
+    return this.withRetry("flushAll", async () => {
+      const keys = await this.redis.keys("queue:*");
+      if (keys.length === 0) return 0;
+      for (const key of keys) {
+        await this.redis.del(key);
+      }
+      return keys.length;
     });
   }
 

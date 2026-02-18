@@ -116,14 +116,14 @@ export function createHandler(ctx: SpawnContext) {
       return `Error cloning repo for agent: ${err instanceof Error ? err.message : String(err)}`;
     }
 
-    // Spawn the subprocess
+    // Spawn the subprocess (inherit stdio so agent logs appear in terminal)
     const proc = Bun.spawn(["bun", "src/life-loop.ts"], {
       env: {
         ...process.env,
         AGENT_CONFIG: JSON.stringify(agentConfig),
       },
-      stdout: "pipe",
-      stderr: "pipe",
+      stdout: "inherit",
+      stderr: "inherit",
     });
 
     // Update session state

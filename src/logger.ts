@@ -1,3 +1,4 @@
+import { appendFileSync, mkdirSync } from "node:fs";
 import type { AgentConfig, SessionState, TokenUsage } from "./types.ts";
 
 // ─── ANSI Color Codes ────────────────────────────────────────────
@@ -132,6 +133,79 @@ export function logRetry(context: string, attempt: number, maxAttempts: number, 
   console.log(`${timestamp()} ${YELLOW}Retry${RESET} ${context} (attempt ${attempt}/${maxAttempts}, waiting ${delayMs}ms)`);
 }
 
+// ─── Debug Logging ──────────────────────────────────────────────
+
+export function logDebug(config: AgentConfig, message: string): void {
+  const line = `${timestamp()} ${agentTag(config.name)} ${DIM}${message}${RESET}`;
+  console.log(line);
+  appendToFile(config.workspacePath, config.name, line);
+}
+
+export function logMessageReceived(config: AgentConfig, msg: { from: string; type: string; content: string }): void {
+  const preview = msg.content.slice(0, 120).replace(/\n/g, " ");
+  const line = `${timestamp()} ${agentTag(config.name)} ${DIM}recv${RESET} [${msg.type}] from ${BOLD}${msg.from}${RESET}: ${DIM}${preview}${RESET}`;
+  console.log(line);
+  appendToFile(config.workspacePath, config.name, line);
+}
+
+export function logApiCall(
+  config: AgentConfig,
+  step: string,
+  messageCount: number,
+  messageRoles: string[],
+  hasTools: boolean,
+): void {
+  const roles = messageRoles.join(",");
+  const toolsLabel = hasTools ? " +tools" : "";
+  const line = `${timestamp()} ${agentTag(config.name)} ${BLUE}API call${RESET} [${step}] ${messageCount} msgs [${roles}]${toolsLabel}`;
+  console.log(line);
+  appendToFile(config.workspacePath, config.name, line);
+}
+
+export function logApiResult(
+  config: AgentConfig,
+  step: string,
+  tokens: { input: number; output: number },
+  stopReason: string,
+  contentTypes: string[],
+): void {
+  const types = contentTypes.join(",");
+  const line = `${timestamp()} ${agentTag(config.name)} ${GREEN}API done${RESET} [${step}] ${tokens.input}+${tokens.output} tok, stop=${stopReason}, content=[${types}]`;
+  console.log(line);
+  appendToFile(config.workspacePath, config.name, line);
+}
+
+export function logToolResult(config: AgentConfig, toolName: string, resultPreview: string): void {
+  const preview = resultPreview.slice(0, 150).replace(/\n/g, " ");
+  const line = `${timestamp()} ${agentTag(config.name)} ${DIM}tool result${RESET} [${toolName}]: ${DIM}${preview}${RESET}`;
+  console.log(line);
+  appendToFile(config.workspacePath, config.name, line);
+}
+
+export function logReflectDecision(
+  config: AgentConfig,
+  decision: string,
+  summary: string,
+): void {
+  const color = decision === "complete" ? GREEN : decision === "error" ? RED : YELLOW;
+  const line = `${timestamp()} ${agentTag(config.name)} ${color}reflect → ${decision}${RESET}: ${summary.slice(0, 200)}`;
+  console.log(line);
+  appendToFile(config.workspacePath, config.name, line);
+}
+
+export function logContextAssembly(
+  config: AgentConfig,
+  stateCount: number,
+  queueMsgCount: number,
+  resultMsgCount: number,
+  resultRoles: string[],
+): void {
+  const roles = resultRoles.join(",");
+  const line = `${timestamp()} ${agentTag(config.name)} ${DIM}context: ${stateCount} states, ${queueMsgCount} queue msgs → ${resultMsgCount} API msgs [${roles}]${RESET}`;
+  console.log(line);
+  appendToFile(config.workspacePath, config.name, line);
+}
+
 // ─── Main Process Logging ────────────────────────────────────────
 
 export function logMainStart(goal: string, workspace: string, workers: number): void {
@@ -240,7 +314,13 @@ export function stripAnsi(str: string): string {
 }
 
 function appendToFile(workspacePath: string, agentName: string, line: string): void {
-  const logPath = `${workspacePath}/logs/${agentName}.log`;
-  const plainLine = stripAnsi(line) + "\n";
-  Bun.write(logPath, plainLine).catch(() => {});
+  try {
+    const logDir = `${workspacePath}/logs`;
+    mkdirSync(logDir, { recursive: true });
+    const logPath = `${logDir}/${agentName}.log`;
+    const plainLine = stripAnsi(line) + "\n";
+    appendFileSync(logPath, plainLine);
+  } catch {
+    // Best effort — don't crash the agent over a log write
+  }
 }

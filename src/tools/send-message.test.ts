@@ -1,6 +1,7 @@
 import { test, expect, describe, beforeEach, afterEach } from "bun:test";
 import { definition, createHandler } from "./send-message.ts";
 import { MessageQueue } from "../message-queue.ts";
+import { MockRedis } from "../mock-redis.ts";
 import { writeSessionState } from "../state-manager.ts";
 import type { SessionState } from "../types.ts";
 
@@ -11,7 +12,7 @@ let mq: MessageQueue;
 beforeEach(async () => {
   tmpDir = `/tmp/sealteam-sendmsg-test-${crypto.randomUUID()}`;
   await Bun.$`mkdir -p ${tmpDir}`.quiet();
-  mq = new MessageQueue("valkey://localhost:6379");
+  mq = new MessageQueue(new MockRedis());
 });
 
 afterEach(async () => {

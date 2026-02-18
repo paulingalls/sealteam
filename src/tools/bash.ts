@@ -22,11 +22,19 @@ export const definition: ToolDefinition = {
   },
 };
 
+/**
+ * Create a handler bound to a default working directory.
+ */
+export function createHandler(defaultCwd: string) {
+  return (input: Record<string, unknown>) => handler(input, defaultCwd);
+}
+
 export async function handler(
   input: Record<string, unknown>,
+  defaultCwd?: string,
 ): Promise<string> {
   const command = input.command as string;
-  const cwd = input.cwd as string | undefined;
+  const cwd = (input.cwd as string | undefined) || defaultCwd;
 
   const args = cwd
     ? Bun.$`bash -c ${command}`.cwd(cwd).nothrow().quiet()

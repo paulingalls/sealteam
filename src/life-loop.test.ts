@@ -5,6 +5,7 @@ import type { AgentConfig, QueueMessage, TokenUsage } from "./types.ts";
 import type { CallParams, CallResult, Message, MessageParam } from "./claude-client.ts";
 import type { ClaudeClient } from "./claude-client.ts";
 import { MessageQueue } from "./message-queue.ts";
+import { MockRedis } from "./mock-redis.ts";
 import { ToolRegistry } from "./tool-registry.ts";
 import { ContextManager } from "./context-manager.ts";
 import { readIterationState } from "./state-manager.ts";
@@ -166,7 +167,7 @@ beforeEach(async () => {
   tmpDir = `/tmp/sealteam-loop-test-${crypto.randomUUID()}`;
   await Bun.$`mkdir -p ${tmpDir}/${agentId}/state`.quiet();
   await Bun.$`mkdir -p ${tmpDir}/logs`.quiet();
-  mq = new MessageQueue("valkey://localhost:6379");
+  mq = new MessageQueue(new MockRedis());
 });
 
 afterEach(async () => {

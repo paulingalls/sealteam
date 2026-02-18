@@ -45,6 +45,13 @@ import {
   logIdle,
   logBudgetExhausted,
   logMaxIterations,
+  logDebug,
+  logMessageReceived,
+  logApiCall,
+  logApiResult,
+  logToolResult,
+  logReflectDecision,
+  logContextAssembly,
 } from "./logger.ts";
 
 const MAX_IDLE_CYCLES = 30;
@@ -101,6 +108,7 @@ export async function runLifeLoop(
 
     if (message) {
       idleCycles = 0;
+      logMessageReceived(config, message);
 
       // Handle cancel
       if (message.type === "cancel") {
@@ -167,6 +175,7 @@ export async function runLifeLoop(
           config, deps, allStates, currentMessages, iteration,
         );
         iterationTokens = addTokens(iterationTokens, peResult.tokensUsed);
+        logStepComplete(config, "plan-execute", peResult.tokensUsed);
 
         await writeIterationState(agentDir, iteration, "plan-execute", {
           iteration,
@@ -196,6 +205,8 @@ export async function runLifeLoop(
           config, deps, allStates, currentMessages, iteration,
         );
         iterationTokens = addTokens(iterationTokens, planResult.tokensUsed);
+        logStepComplete(config, "plan", planResult.tokensUsed);
+        logDebug(config, `plan complexity=${planResult.complexity}, plan="${String(planResult.plan).slice(0, 150)}"`);
 
         const planState: IterationState = {
           iteration,
@@ -214,6 +225,7 @@ export async function runLifeLoop(
           config, deps, allStates, planResult.plan, iteration,
         );
         iterationTokens = addTokens(iterationTokens, execResult.tokensUsed);
+        logStepComplete(config, "execute", execResult.tokensUsed);
 
         const execState: IterationState = {
           iteration,
@@ -232,6 +244,8 @@ export async function runLifeLoop(
         config, deps, allStates, iteration,
       );
       iterationTokens = addTokens(iterationTokens, reflectResult.tokensUsed);
+      logStepComplete(config, "reflect", reflectResult.tokensUsed);
+      logReflectDecision(config, reflectResult.decision.decision, reflectResult.decision.summary?.outcome ?? "no summary");
 
       const reflectState: IterationState = {
         iteration,
@@ -366,11 +380,16 @@ async function doPlan(
     currentIteration: iteration,
   });
 
+  const finalMessages = ensureMessages(messages, "What is your plan for this iteration?");
+  logContextAssembly(config, allStates.length, currentMessages.length, finalMessages.length, finalMessages.map(m => m.role));
+  logApiCall(config, "plan", finalMessages.length, finalMessages.map(m => m.role), false);
+
   const { response, tokensUsed } = await deps.claudeClient.call({
     model: config.model,
     systemPrompt,
-    messages: ensureMessages(messages, "What is your plan for this iteration?"),
+    messages: finalMessages,
   });
+  logApiResult(config, "plan", tokensUsed, response.stop_reason ?? "unknown", response.content.map(b => b.type));
 
   const text = getTextContent(response);
   const parsed = safeParseJson(text);
@@ -395,8 +414,14 @@ async function doExecute(
     currentIteration: iteration,
   });
 
+  const finalMessages = ensureMessages(messages, "Execute the plan now.");
+  logContextAssembly(config, allStates.length, 0, finalMessages.length, finalMessages.map(m => m.role));
+  logDebug(config, `execute: ${tools.length} tools available`);
+
   const result = await executeWithToolLoop(
-    config, deps, systemPrompt, messages, tools,
+    config, deps, systemPrompt,
+    finalMessages,
+    tools,
   );
 
   return { output: result.output, tokensUsed: result.tokensUsed, plan, complexity: "complex" };
@@ -417,9 +442,13 @@ async function doPlanExecute(
     currentIteration: iteration,
   });
 
+  const finalMessages = ensureMessages(messages, "Proceed with the fast-path iteration.");
+  logContextAssembly(config, allStates.length, currentMessages.length, finalMessages.length, finalMessages.map(m => m.role));
+  logDebug(config, `plan-execute: ${tools.length} tools available`);
+
   const result = await executeWithToolLoop(
     config, deps, systemPrompt,
-    ensureMessages(messages, "Proceed with the fast-path iteration."),
+    finalMessages,
     tools,
   );
 
@@ -444,11 +473,16 @@ async function doReflect(
     currentIteration: iteration,
   });
 
+  const finalMessages = ensureMessages(messages, "Reflect on this iteration's results.");
+  logContextAssembly(config, allStates.length, 0, finalMessages.length, finalMessages.map(m => m.role));
+  logApiCall(config, "reflect", finalMessages.length, finalMessages.map(m => m.role), false);
+
   const { response, tokensUsed } = await deps.claudeClient.call({
     model: config.model,
     systemPrompt,
-    messages: ensureMessages(messages, "Reflect on this iteration's results."),
+    messages: finalMessages,
   });
+  logApiResult(config, "reflect", tokensUsed, response.stop_reason ?? "unknown", response.content.map(b => b.type));
 
   const text = getTextContent(response);
   const parsed = safeParseJson(text);
@@ -509,6 +543,8 @@ async function executeWithToolLoop(
   let turns = 0;
 
   while (turns < MAX_TOOL_TURNS) {
+    logApiCall(config, `execute/turn-${turns}`, currentMessages.length, currentMessages.map(m => m.role), tools.length > 0);
+
     const { response, tokensUsed } = await deps.claudeClient.call({
       model: config.model,
       systemPrompt,
@@ -516,10 +552,12 @@ async function executeWithToolLoop(
       tools: tools.length > 0 ? tools : undefined,
     });
     totalTokens = addTokens(totalTokens, tokensUsed);
+    logApiResult(config, `execute/turn-${turns}`, tokensUsed, response.stop_reason ?? "unknown", response.content.map(b => b.type));
 
     // Check for tool use blocks
     const toolUseBlocks = getToolUseBlocks(response);
     if (toolUseBlocks.length === 0 || response.stop_reason === "end_turn") {
+      logDebug(config, `execute done after ${turns + 1} turns, total ${totalTokens.input}+${totalTokens.output} tokens`);
       // No more tool calls — return the final response
       return {
         output: getTextContent(response) || response.content,
@@ -528,13 +566,16 @@ async function executeWithToolLoop(
     }
 
     // Process tool calls
+    logDebug(config, `${toolUseBlocks.length} tool call(s): ${toolUseBlocks.map(b => b.name).join(", ")}`);
     const toolResults: MessageParam["content"] = [];
     for (const block of toolUseBlocks) {
       if (deps.toolRegistry.isServerTool(block.name)) {
+        logDebug(config, `server tool ${block.name} (handled by API)`);
         // Server-side tools are handled by the API — results are in the response
         continue;
       }
 
+      logToolCall(config, block.name);
       let result: string;
       try {
         result = await deps.toolRegistry.executeTool(
@@ -544,6 +585,7 @@ async function executeWithToolLoop(
       } catch (err) {
         result = `Error: ${err instanceof Error ? err.message : String(err)}`;
       }
+      logToolResult(config, block.name, result);
 
       toolResults.push({
         type: "tool_result" as const,
@@ -665,8 +707,9 @@ function buildSystemPrompt(config: AgentConfig, basePrompt: string): string {
 }
 
 /**
- * Ensure the messages array is non-empty and starts with a user message.
- * Claude API requires at least one message, and it must start with user role.
+ * Ensure the messages array is non-empty, starts with a user message,
+ * and ends with a user message. Some models (e.g. Opus) do not support
+ * assistant message prefill, so the conversation must end with a user turn.
  */
 function ensureMessages(
   messages: MessageParam[],
@@ -675,11 +718,22 @@ function ensureMessages(
   if (messages.length === 0) {
     return [{ role: "user", content: fallbackContent }];
   }
+  let result = messages;
+  let modified = false;
   // If first message is not user role, prepend a user message
-  if (messages[0]!.role !== "user") {
-    return [{ role: "user", content: fallbackContent }, ...messages];
+  if (result[0]!.role !== "user") {
+    result = [{ role: "user", content: fallbackContent }, ...result];
+    modified = true;
   }
-  return messages;
+  // If last message is not user role, append a user message
+  if (result[result.length - 1]!.role !== "user") {
+    result = [...result, { role: "user", content: fallbackContent }];
+    modified = true;
+  }
+  if (modified) {
+    console.log(`[ensureMessages] fixed: ${messages.length} → ${result.length} msgs, roles: [${result.map(m => m.role).join(",")}]`);
+  }
+  return result;
 }
 
 function safeParseJson(text: string): Record<string, unknown> | null {

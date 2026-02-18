@@ -56,7 +56,7 @@ ${plan}
 
 Execute the plan above using the available tools. Make tool calls as needed to accomplish each step. Be thorough and precise. If a step fails, note the failure and continue with remaining steps where possible.
 
-Work within your agent directory. Your git branch is agent/${config.name}.`;
+Your working directory is ${config.workspacePath}/${config.name}/ — all commands and file paths are relative to it. Your git branch is agent/${config.name}.`;
 }
 
 /**
@@ -76,7 +76,7 @@ Available tools: ${config.tools.join(", ")}
 
 This is a fast-path iteration. State your intent briefly, then immediately execute it using tool calls. Do both planning and execution in this single response.
 
-Work within your agent directory. Your git branch is agent/${config.name}.`;
+Your working directory is ${config.workspacePath}/${config.name}/ — all commands and file paths are relative to it. Your git branch is agent/${config.name}.`;
 }
 
 /**
