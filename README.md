@@ -22,6 +22,30 @@ valkey-server &
 bun run sealteam "Build a REST API for a todo app with authentication"
 ```
 
+## Install as a Standalone Executable
+
+You can compile SealTeam into a self-contained executable and add it to your PATH so it can be run from any directory:
+
+```bash
+bun build --compile src/index.ts --outfile sealteam
+
+# Move it somewhere on your PATH
+sudo mv sealteam /usr/local/bin/
+
+# Now run from anywhere
+sealteam "Build a REST API for a todo app with authentication"
+```
+
+The compiled binary bundles Bun and all dependencies into a single file — no runtime installation required on the target machine.
+
+To cross-compile for other platforms:
+
+```bash
+bun build --compile src/index.ts --target=bun-linux-x64 --outfile sealteam-linux
+bun build --compile src/index.ts --target=bun-darwin-arm64 --outfile sealteam-macos
+bun build --compile src/index.ts --target=bun-windows-x64 --outfile sealteam.exe
+```
+
 ## How It Works
 
 1. **Main process** parses your goal and spawns a team leader agent ("Bob")
