@@ -56,7 +56,7 @@ test("AgentConfig conforms to interface", () => {
     role: "backend engineer",
     purpose: "Build the REST API with authentication",
     tools: ["bash", "read-file", "write-file", "git"],
-    model: "claude-sonnet-4-20250514",
+    model: "claude-sonnet-4-6",
     tokenBudget: 100000,
     maxIterations: 50,
     workspacePath: "./workspace",
@@ -141,7 +141,7 @@ test("SessionState conforms to interface", () => {
       role: "team leader",
       purpose: "Lead the team",
       tools: ["bash", "spawn-agent", "send-message"],
-      model: "claude-opus-4-20250514",
+      model: "claude-opus-4-6",
       tokenBudget: 200000,
       maxIterations: 50,
       workspacePath: "./workspace",
@@ -178,7 +178,7 @@ test("AgentSessionEntry supports all statuses", () => {
         role: "test",
         purpose: "test",
         tools: [],
-        model: "claude-sonnet-4-20250514",
+        model: "claude-sonnet-4-6",
         tokenBudget: 100000,
         maxIterations: 50,
         workspacePath: ".",
@@ -261,8 +261,8 @@ test("CLIOptions conforms to interface", () => {
     maxIterations: 50,
     workspace: "./workspace",
     valkeyUrl: "valkey://localhost:6379",
-    leaderModel: "claude-opus-4-20250514",
-    teamModel: "claude-sonnet-4-20250514",
+    leaderModel: "claude-opus-4-6",
+    teamModel: "claude-sonnet-4-6",
   };
   expect(opts.goal).toContain("REST API");
   expect(opts.workers).toBe(6);
@@ -276,8 +276,8 @@ test("CLIOptions supports optional resumeFrom", () => {
     maxIterations: 50,
     workspace: "./workspace",
     valkeyUrl: "valkey://localhost:6379",
-    leaderModel: "claude-opus-4-20250514",
-    teamModel: "claude-sonnet-4-20250514",
+    leaderModel: "claude-opus-4-6",
+    teamModel: "claude-sonnet-4-6",
     resumeFrom: "3-execute",
   };
   expect(opts.resumeFrom).toBe("3-execute");

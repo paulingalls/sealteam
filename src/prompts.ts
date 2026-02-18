@@ -150,7 +150,7 @@ When spawning agents, consider:
 - Each agent should have a focused, well-defined purpose
 - Don't spawn more agents than needed
 - Agents cannot spawn other agents — only you can do that
-- Give agents the model "claude-sonnet-4-20250514" (the default)
+- Give agents the model "claude-sonnet-4-6" (the default)
 
 ## Final Completion
 When all work is done and merged into main:

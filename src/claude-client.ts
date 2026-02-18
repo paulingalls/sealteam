@@ -26,8 +26,8 @@ export interface CallResult {
 
 // Context window sizes per model family
 const CONTEXT_LIMITS: Record<string, number> = {
-  "claude-opus-4-20250514": 200000,
-  "claude-sonnet-4-20250514": 200000,
+  "claude-opus-4-6": 200000,
+  "claude-sonnet-4-6": 200000,
 };
 const DEFAULT_CONTEXT_LIMIT = 200000;
 

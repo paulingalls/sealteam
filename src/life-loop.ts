@@ -725,7 +725,7 @@ if (import.meta.main) {
         ? {
             workspacePath: config.workspacePath,
             valkeyUrl: config.valkeyUrl,
-            defaultModel: process.env.SEALTEAM_TEAM_MODEL ?? "claude-sonnet-4-20250514",
+            defaultModel: process.env.SEALTEAM_TEAM_MODEL ?? "claude-sonnet-4-6",
             defaultBudget: parseInt(process.env.SEALTEAM_DEFAULT_BUDGET ?? "100000", 10),
             defaultMaxIterations: parseInt(process.env.SEALTEAM_DEFAULT_MAX_ITERATIONS ?? "50", 10),
             maxWorkers: parseInt(process.env.SEALTEAM_MAX_AGENTS ?? "6", 10),

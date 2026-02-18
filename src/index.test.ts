@@ -48,8 +48,8 @@ describe("parseCLIArgs", () => {
       "--max-iterations", "25",
       "--workspace", "/tmp/myworkspace",
       "--valkey-url", "valkey://other:6380",
-      "--leader-model", "claude-opus-4-20250514",
-      "--team-model", "claude-sonnet-4-20250514",
+      "--leader-model", "claude-opus-4-6",
+      "--team-model", "claude-sonnet-4-6",
       "Build an API",
     ]);
 
@@ -58,8 +58,8 @@ describe("parseCLIArgs", () => {
     expect(opts.maxIterations).toBe(25);
     expect(opts.workspace).toBe("/tmp/myworkspace");
     expect(opts.valkeyUrl).toBe("valkey://other:6380");
-    expect(opts.leaderModel).toBe("claude-opus-4-20250514");
-    expect(opts.teamModel).toBe("claude-sonnet-4-20250514");
+    expect(opts.leaderModel).toBe("claude-opus-4-6");
+    expect(opts.teamModel).toBe("claude-sonnet-4-6");
     expect(opts.goal).toBe("Build an API");
   });
 
@@ -70,8 +70,8 @@ describe("parseCLIArgs", () => {
     expect(opts.maxIterations).toBe(50);
     expect(opts.workspace).toBe("./workspace");
     expect(opts.valkeyUrl).toBe("valkey://localhost:6379");
-    expect(opts.leaderModel).toBe("claude-opus-4-20250514");
-    expect(opts.teamModel).toBe("claude-sonnet-4-20250514");
+    expect(opts.leaderModel).toBe("claude-opus-4-6");
+    expect(opts.teamModel).toBe("claude-sonnet-4-6");
   });
 
   test("env vars override defaults", () => {
@@ -80,8 +80,8 @@ describe("parseCLIArgs", () => {
     process.env.SEALTEAM_DEFAULT_MAX_ITERATIONS = "100";
     process.env.SEALTEAM_WORKSPACE = "/custom/workspace";
     process.env.VALKEY_URL = "valkey://custom:6381";
-    process.env.SEALTEAM_LEADER_MODEL = "claude-opus-4-20250514";
-    process.env.SEALTEAM_TEAM_MODEL = "claude-sonnet-4-20250514";
+    process.env.SEALTEAM_LEADER_MODEL = "claude-opus-4-6";
+    process.env.SEALTEAM_TEAM_MODEL = "claude-sonnet-4-6";
 
     const opts = parseCLIArgs(["bun", "src/index.ts", "Goal"]);
 
@@ -152,8 +152,8 @@ describe("validateOptions", () => {
       maxIterations: 50,
       workspace: "./workspace",
       valkeyUrl: "valkey://localhost:6379",
-      leaderModel: "claude-opus-4-20250514",
-      teamModel: "claude-sonnet-4-20250514",
+      leaderModel: "claude-opus-4-6",
+      teamModel: "claude-sonnet-4-6",
     };
     expect(validateOptions(opts)).toBeNull();
   });
@@ -167,8 +167,8 @@ describe("validateOptions", () => {
       maxIterations: 50,
       workspace: "./workspace",
       valkeyUrl: "valkey://localhost:6379",
-      leaderModel: "claude-opus-4-20250514",
-      teamModel: "claude-sonnet-4-20250514",
+      leaderModel: "claude-opus-4-6",
+      teamModel: "claude-sonnet-4-6",
     };
     const err = validateOptions(opts);
     expect(err).not.toBeNull();
@@ -184,8 +184,8 @@ describe("validateOptions", () => {
       maxIterations: 50,
       workspace: "./workspace",
       valkeyUrl: "valkey://localhost:6379",
-      leaderModel: "claude-opus-4-20250514",
-      teamModel: "claude-sonnet-4-20250514",
+      leaderModel: "claude-opus-4-6",
+      teamModel: "claude-sonnet-4-6",
       resumeFrom: "/tmp/old",
     };
     expect(validateOptions(opts)).toBeNull();
@@ -200,8 +200,8 @@ describe("validateOptions", () => {
       maxIterations: 50,
       workspace: "./workspace",
       valkeyUrl: "valkey://localhost:6379",
-      leaderModel: "claude-opus-4-20250514",
-      teamModel: "claude-sonnet-4-20250514",
+      leaderModel: "claude-opus-4-6",
+      teamModel: "claude-sonnet-4-6",
     };
     const err = validateOptions(opts);
     expect(err).not.toBeNull();
@@ -217,8 +217,8 @@ describe("validateOptions", () => {
       maxIterations: 50,
       workspace: "./workspace",
       valkeyUrl: "valkey://localhost:6379",
-      leaderModel: "claude-opus-4-20250514",
-      teamModel: "claude-sonnet-4-20250514",
+      leaderModel: "claude-opus-4-6",
+      teamModel: "claude-sonnet-4-6",
     };
     const err = validateOptions(opts);
     expect(err).not.toBeNull();
@@ -234,8 +234,8 @@ describe("validateOptions", () => {
       maxIterations: -1,
       workspace: "./workspace",
       valkeyUrl: "valkey://localhost:6379",
-      leaderModel: "claude-opus-4-20250514",
-      teamModel: "claude-sonnet-4-20250514",
+      leaderModel: "claude-opus-4-6",
+      teamModel: "claude-sonnet-4-6",
     };
     const err = validateOptions(opts);
     expect(err).not.toBeNull();
@@ -304,8 +304,8 @@ describe("main - workspace creation", () => {
       maxIterations: 50,
       workspace: tmpDir,
       valkeyUrl: "valkey://localhost:6379",
-      leaderModel: "claude-opus-4-20250514",
-      teamModel: "claude-sonnet-4-20250514",
+      leaderModel: "claude-opus-4-6",
+      teamModel: "claude-sonnet-4-6",
     };
 
     // Replicate the leader config creation from main()
@@ -323,7 +323,7 @@ describe("main - workspace creation", () => {
 
     expect(bobConfig.tools).toHaveLength(8);
     expect(bobConfig.tokenBudget).toBe(200000);
-    expect(bobConfig.model).toBe("claude-opus-4-20250514");
+    expect(bobConfig.model).toBe("claude-opus-4-6");
     expect(bobConfig.name).toBe("bob");
   });
 });

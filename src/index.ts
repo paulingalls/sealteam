@@ -42,8 +42,8 @@ export function parseCLIArgs(argv: string[]): CLIOptions {
   let maxIterations = parseInt(process.env.SEALTEAM_DEFAULT_MAX_ITERATIONS ?? "50", 10);
   let workspace = process.env.SEALTEAM_WORKSPACE ?? "./workspace";
   let valkeyUrl = process.env.VALKEY_URL ?? "valkey://localhost:6379";
-  let leaderModel = process.env.SEALTEAM_LEADER_MODEL ?? "claude-opus-4-20250514";
-  let teamModel = process.env.SEALTEAM_TEAM_MODEL ?? "claude-sonnet-4-20250514";
+  let leaderModel = process.env.SEALTEAM_LEADER_MODEL ?? "claude-opus-4-6";
+  let teamModel = process.env.SEALTEAM_TEAM_MODEL ?? "claude-sonnet-4-6";
   let resumeFrom: string | undefined;
   let goal = "";
 
@@ -119,8 +119,8 @@ Options:
   --max-iterations <n>   Default max iterations per agent (default: 50)
   --workspace <path>     Output workspace directory (default: ./workspace)
   --valkey-url <url>     Valkey connection URL (default: valkey://localhost:6379)
-  --leader-model <model> Model for team leader (default: claude-opus-4-20250514)
-  --team-model <model>   Model for teammates (default: claude-sonnet-4-20250514)
+  --leader-model <model> Model for team leader (default: claude-opus-4-6)
+  --team-model <model>   Model for teammates (default: claude-sonnet-4-6)
   --resume-from <path>   Resume from a previous session workspace
   -h, --help             Show this help message
 

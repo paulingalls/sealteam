@@ -36,7 +36,7 @@ function makeConfig(overrides?: Partial<AgentConfig>): AgentConfig {
     role: "Test role",
     purpose: "Test purpose",
     tools: ["bash"],
-    model: "claude-sonnet-4-20250514",
+    model: "claude-sonnet-4-6",
     tokenBudget: 100000,
     maxIterations: 50,
     workspacePath: "/tmp/sealteam-test-logger",
@@ -69,7 +69,7 @@ describe("Logger", () => {
       const output = stripAnsi(logSpy.mock.calls[0]![0] as string);
       expect(output).toContain("[alice]");
       expect(output).toContain("Starting");
-      expect(output).toContain("claude-sonnet-4-20250514");
+      expect(output).toContain("claude-sonnet-4-6");
     });
   });
 

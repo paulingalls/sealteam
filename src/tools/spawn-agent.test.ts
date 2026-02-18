@@ -42,7 +42,7 @@ describe("spawn-agent tool", () => {
     const ctx: SpawnContext = {
       workspacePath: tmpDir,
       valkeyUrl: "valkey://localhost:6379",
-      defaultModel: "claude-sonnet-4-20250514",
+      defaultModel: "claude-sonnet-4-6",
       defaultBudget: 100000,
       defaultMaxIterations: 50,
       maxWorkers: 6,
@@ -91,7 +91,7 @@ describe("spawn-agent tool", () => {
           role: "worker",
           purpose: "work",
           tools: [],
-          model: "claude-sonnet-4-20250514",
+          model: "claude-sonnet-4-6",
           tokenBudget: 100000,
           maxIterations: 50,
           workspacePath: tmpDir,
@@ -108,7 +108,7 @@ describe("spawn-agent tool", () => {
     const ctx: SpawnContext = {
       workspacePath: tmpDir,
       valkeyUrl: "valkey://localhost:6379",
-      defaultModel: "claude-sonnet-4-20250514",
+      defaultModel: "claude-sonnet-4-6",
       defaultBudget: 100000,
       defaultMaxIterations: 50,
       maxWorkers: 2, // limit to 2
@@ -129,7 +129,7 @@ describe("spawn-agent tool", () => {
     const ctx: SpawnContext = {
       workspacePath: tmpDir,
       valkeyUrl: "valkey://localhost:6379",
-      defaultModel: "claude-sonnet-4-20250514",
+      defaultModel: "claude-sonnet-4-6",
       defaultBudget: 50000,
       defaultMaxIterations: 25,
       maxWorkers: 6,
@@ -145,7 +145,7 @@ describe("spawn-agent tool", () => {
 
     const session = await readSessionState(tmpDir);
     const agent = session!.agents.find((a) => a.config.name === "charlie");
-    expect(agent!.config.model).toBe("claude-sonnet-4-20250514");
+    expect(agent!.config.model).toBe("claude-sonnet-4-6");
     expect(agent!.config.tokenBudget).toBe(50000);
     expect(agent!.config.maxIterations).toBe(25);
   });

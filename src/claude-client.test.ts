@@ -47,8 +47,8 @@ describe("ClaudeClient unit tests", () => {
   });
 
   test("getContextLimit returns known limits", () => {
-    expect(getContextLimit("claude-opus-4-20250514")).toBe(200000);
-    expect(getContextLimit("claude-sonnet-4-20250514")).toBe(200000);
+    expect(getContextLimit("claude-opus-4-6")).toBe(200000);
+    expect(getContextLimit("claude-sonnet-4-6")).toBe(200000);
   });
 
   test("getContextLimit returns default for unknown model", () => {
@@ -121,7 +121,7 @@ describe("ClaudeClient integration tests", () => {
     }
     const client = new ClaudeClient();
     const result = await client.call({
-      model: "claude-sonnet-4-20250514",
+      model: "claude-sonnet-4-6",
       systemPrompt: "You are a helpful assistant. Be extremely brief.",
       messages: [{ role: "user", content: "Say hello in exactly 3 words." }],
       maxTokens: 64,
@@ -162,7 +162,7 @@ describe("ClaudeClient integration tests", () => {
     ];
 
     const result = await client.call({
-      model: "claude-sonnet-4-20250514",
+      model: "claude-sonnet-4-6",
       systemPrompt: "You have access to a weather tool. Use it when asked about weather.",
       messages: [{ role: "user", content: "What's the weather in Tokyo?" }],
       tools,
@@ -184,7 +184,7 @@ describe("ClaudeClient integration tests", () => {
     const client = new ClaudeClient();
 
     await client.call({
-      model: "claude-sonnet-4-20250514",
+      model: "claude-sonnet-4-6",
       systemPrompt: "Be brief.",
       messages: [{ role: "user", content: "Say 'one'." }],
       maxTokens: 32,
@@ -194,7 +194,7 @@ describe("ClaudeClient integration tests", () => {
     expect(usage1.total).toBeGreaterThan(0);
 
     await client.call({
-      model: "claude-sonnet-4-20250514",
+      model: "claude-sonnet-4-6",
       systemPrompt: "Be brief.",
       messages: [{ role: "user", content: "Say 'two'." }],
       maxTokens: 32,

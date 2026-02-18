@@ -33,7 +33,7 @@ function makeAgentConfig(name: string): AgentConfig {
     role: "test agent",
     purpose: "testing",
     tools: [],
-    model: "claude-sonnet-4-20250514",
+    model: "claude-sonnet-4-6",
     tokenBudget: 100000,
     maxIterations: 50,
     workspacePath: tmpDir,

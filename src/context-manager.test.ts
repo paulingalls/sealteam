@@ -41,12 +41,12 @@ function makeMessage(from: string, content: string): QueueMessage {
 
 describe("ContextManager", () => {
   test("constructor sets context limit from model", () => {
-    const cm = new ContextManager("claude-opus-4-20250514");
+    const cm = new ContextManager("claude-opus-4-6");
     expect(cm.getContextLimit()).toBe(200000);
   });
 
   test("assembleContext with fewer than 5 iterations returns all in full", () => {
-    const cm = new ContextManager("claude-sonnet-4-20250514");
+    const cm = new ContextManager("claude-sonnet-4-6");
 
     const states: IterationState[] = [
       makeState(1, "plan", "plan input 1", "plan output 1"),
@@ -73,7 +73,7 @@ describe("ContextManager", () => {
   });
 
   test("assembleContext compacts iterations older than 5", () => {
-    const cm = new ContextManager("claude-sonnet-4-20250514");
+    const cm = new ContextManager("claude-sonnet-4-6");
 
     const states: IterationState[] = [];
     // Create 8 iterations with reflect summaries
@@ -118,7 +118,7 @@ describe("ContextManager", () => {
   });
 
   test("assembleContext includes current queue messages", () => {
-    const cm = new ContextManager("claude-sonnet-4-20250514");
+    const cm = new ContextManager("claude-sonnet-4-6");
 
     const messages = cm.assembleContext({
       iterationStates: [makeState(1, "plan", "input", "output")],
@@ -140,7 +140,7 @@ describe("ContextManager", () => {
   });
 
   test("assembleContext with no messages and no states returns empty", () => {
-    const cm = new ContextManager("claude-sonnet-4-20250514");
+    const cm = new ContextManager("claude-sonnet-4-6");
     const messages = cm.assembleContext({
       iterationStates: [],
       currentMessages: [],
@@ -150,7 +150,7 @@ describe("ContextManager", () => {
   });
 
   test("assembleContext with only queue messages", () => {
-    const cm = new ContextManager("claude-sonnet-4-20250514");
+    const cm = new ContextManager("claude-sonnet-4-6");
     const messages = cm.assembleContext({
       iterationStates: [],
       currentMessages: [makeMessage("bob", "Start working")],
@@ -163,26 +163,26 @@ describe("ContextManager", () => {
 
 describe("compaction triggers", () => {
   test("checkCompactionNeeded returns none at low utilization", () => {
-    const cm = new ContextManager("claude-sonnet-4-20250514");
+    const cm = new ContextManager("claude-sonnet-4-6");
     // Default estimate is 0
     expect(cm.checkCompactionNeeded()).toBe("none");
   });
 
   test("checkCompactionNeeded returns soft at 70%+", () => {
-    const cm = new ContextManager("claude-sonnet-4-20250514");
+    const cm = new ContextManager("claude-sonnet-4-6");
     // Context limit is 200000, so 70% = 140000 tokens
     cm.updateTokenUsage(145000);
     expect(cm.checkCompactionNeeded()).toBe("soft");
   });
 
   test("checkCompactionNeeded returns hard at 90%+", () => {
-    const cm = new ContextManager("claude-sonnet-4-20250514");
+    const cm = new ContextManager("claude-sonnet-4-6");
     cm.updateTokenUsage(185000);
     expect(cm.checkCompactionNeeded()).toBe("hard");
   });
 
   test("getUtilization reflects updated token usage", () => {
-    const cm = new ContextManager("claude-sonnet-4-20250514");
+    const cm = new ContextManager("claude-sonnet-4-6");
     cm.updateTokenUsage(100000);
     expect(cm.getUtilization()).toBe(0.5);
   });
@@ -190,7 +190,7 @@ describe("compaction triggers", () => {
 
 describe("compactIterations", () => {
   test("keeps recent iterations unchanged", () => {
-    const cm = new ContextManager("claude-sonnet-4-20250514");
+    const cm = new ContextManager("claude-sonnet-4-6");
 
     const states = [
       makeState(8, "plan", "detailed plan", "detailed output"),
@@ -204,7 +204,7 @@ describe("compactIterations", () => {
   });
 
   test("summarizes old iterations", () => {
-    const cm = new ContextManager("claude-sonnet-4-20250514");
+    const cm = new ContextManager("claude-sonnet-4-6");
 
     const longInput = "x".repeat(1000);
     const states = [
@@ -219,7 +219,7 @@ describe("compactIterations", () => {
   });
 
   test("trims tool results for semi-old iterations", () => {
-    const cm = new ContextManager("claude-sonnet-4-20250514");
+    const cm = new ContextManager("claude-sonnet-4-6");
 
     // 500 lines of output in a nested object
     const bigOutput = {
@@ -239,7 +239,7 @@ describe("compactIterations", () => {
 
 describe("tool result trimming", () => {
   test("large text output gets trimmed", () => {
-    const cm = new ContextManager("claude-sonnet-4-20250514");
+    const cm = new ContextManager("claude-sonnet-4-6");
 
     // Create a state with 1000 lines of output
     const bigText = Array.from({ length: 1000 }, (_, i) => `line-${i}`).join("\n");
@@ -262,7 +262,7 @@ describe("tool result trimming", () => {
   });
 
   test("small text output is not trimmed", () => {
-    const cm = new ContextManager("claude-sonnet-4-20250514");
+    const cm = new ContextManager("claude-sonnet-4-6");
 
     const smallText = "just a few lines\nof output\n";
     const states = [

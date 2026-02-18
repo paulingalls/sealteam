@@ -62,7 +62,7 @@ function textResponse(text: string, tokens = { input: 100, output: 50 }): CallRe
       id: "msg_test",
       type: "message",
       role: "assistant",
-      model: "claude-sonnet-4-20250514",
+      model: "claude-sonnet-4-6",
       content: [{ type: "text", text, citations: null }],
       stop_reason: "end_turn",
       stop_sequence: null,
@@ -82,7 +82,7 @@ function toolUseResponse(
       id: "msg_test",
       type: "message",
       role: "assistant",
-      model: "claude-sonnet-4-20250514",
+      model: "claude-sonnet-4-6",
       content: [
         { type: "tool_use", id: `tu_${crypto.randomUUID().slice(0, 8)}`, name: toolName, input },
       ],
@@ -133,7 +133,7 @@ function makeConfig(overrides: Partial<AgentConfig> = {}): AgentConfig {
     role: "test role",
     purpose: "test purpose",
     tools: ["bash", "read-file", "write-file"],
-    model: "claude-sonnet-4-20250514",
+    model: "claude-sonnet-4-6",
     tokenBudget: 100000,
     maxIterations: 5,
     workspacePath: tmpDir,
@@ -151,7 +151,7 @@ function makeDeps(mockClient: MockClaudeClient): LifeLoopDeps {
     messageQueue: mq,
     workspacePath: tmpDir,
   });
-  const contextManager = new ContextManager("claude-sonnet-4-20250514");
+  const contextManager = new ContextManager("claude-sonnet-4-6");
 
   return {
     claudeClient: mockClient as unknown as ClaudeClient,

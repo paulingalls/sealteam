@@ -93,8 +93,8 @@ bun run sealteam [options] "<goal>"
 | `--max-iterations <n>` | 50 | Max loop iterations per agent |
 | `--workspace <path>` | ./workspace | Output workspace directory |
 | `--valkey-url <url>` | valkey://localhost:6379 | Valkey connection URL |
-| `--leader-model <model>` | claude-opus-4-20250514 | Model for team leader |
-| `--team-model <model>` | claude-sonnet-4-20250514 | Model for worker agents |
+| `--leader-model <model>` | claude-opus-4-6 | Model for team leader |
+| `--team-model <model>` | claude-sonnet-4-6 | Model for worker agents |
 | `--resume-from <path>` | | Resume from a previous session workspace |
 
 ### Environment Variables

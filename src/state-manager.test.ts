@@ -150,7 +150,7 @@ test("writeSessionState and readSessionState round-trip", async () => {
           role: "team leader",
           purpose: "Lead the team",
           tools: ["bash", "spawn-agent"],
-          model: "claude-opus-4-20250514",
+          model: "claude-opus-4-6",
           tokenBudget: 200000,
           maxIterations: 50,
           workspacePath: tmpDir,
