@@ -180,6 +180,7 @@ export async function main(options: CLIOptions): Promise<void> {
     model: options.leaderModel,
     tokenBudget: options.budget * 2, // Leader gets 2x budget
     maxIterations: options.maxIterations,
+    maxToolTurns: 75, // Leader needs more tool turns for merges
     workspacePath: workspace,
     valkeyUrl,
   };
@@ -440,6 +441,16 @@ async function monitorLoop(
       } else if (exitCode === 0) {
         // Agent exited cleanly
         await updateAgentStatus(workspace, ap.config.name, "completed");
+
+        // Fallback: if Bob exits cleanly, ensure session is marked completed
+        if (ap.config.name === "bob") {
+          const session = await readSessionState(workspace);
+          if (session && session.status === "running") {
+            logMainMessage("main", "info", "Bob exited cleanly — marking session completed (fallback)");
+            session.status = "completed";
+            await writeSessionState(workspace, session);
+          }
+        }
       }
     }
 

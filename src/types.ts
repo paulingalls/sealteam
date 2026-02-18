@@ -28,6 +28,7 @@ export interface AgentConfig {
   model: string;
   tokenBudget: number;
   maxIterations: number;
+  maxToolTurns?: number;
   workspacePath: string;
   valkeyUrl: string;
 }

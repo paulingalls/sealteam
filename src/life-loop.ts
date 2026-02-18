@@ -31,6 +31,7 @@ import {
   planExecutePrompt,
   reflectPrompt,
   leaderContextPrompt,
+  workerContextPrompt,
 } from "./prompts.ts";
 import {
   logAgentStart,
@@ -56,7 +57,9 @@ import {
 
 const MAX_IDLE_CYCLES = 30;
 const MAX_SELF_RECOVERY = 3;
-const MAX_TOOL_TURNS = 25;
+const DEFAULT_MAX_TOOL_TURNS = 50;
+const TOOL_LOOP_COMPACT_AFTER = 8;
+const TOOL_LOOP_KEEP_RECENT = 4;
 
 export interface LifeLoopDeps {
   claudeClient: ClaudeClient;
@@ -354,7 +357,34 @@ export async function runLifeLoop(
     iteration++;
   }
 
-  logMaxIterations(config, config.maxIterations);
+  // ── Post-loop: send exit message so session terminates ──
+  const exitReason = iteration > config.maxIterations
+    ? `max iterations (${config.maxIterations}) reached`
+    : `token budget (${config.tokenBudget}) exhausted`;
+
+  if (config.name === "bob") {
+    // Leader sends all-complete so the monitor loop terminates the session
+    logMaxIterations(config, config.maxIterations);
+    await messageQueue.send({
+      id: crypto.randomUUID(),
+      from: "bob",
+      to: "main",
+      type: "all-complete",
+      content: `Session ending: ${exitReason}. Work completed so far has been merged.`,
+      timestamp: Date.now(),
+    });
+  } else {
+    // Worker notifies leader it ran out of budget/iterations
+    logMaxIterations(config, config.maxIterations);
+    await messageQueue.send({
+      id: crypto.randomUUID(),
+      from: config.name,
+      to: "bob",
+      type: "status",
+      content: `Agent ${config.name} exiting: ${exitReason}.`,
+      timestamp: Date.now(),
+    });
+  }
 }
 
 // ─── Step Implementations ────────────────────────────────────────
@@ -466,7 +496,13 @@ async function doReflect(
   allStates: IterationState[],
   iteration: number,
 ): Promise<{ decision: ReflectDecision; tokensUsed: TokenUsage; complexity: "simple" | "complex" }> {
-  const systemPrompt = buildSystemPrompt(config, reflectPrompt(config));
+  // Calculate remaining budget for the reflect prompt
+  const usage = deps.claudeClient.getTokenUsage();
+  const tokensLeft = Math.max(0, config.tokenBudget - usage.total);
+  const percentLeft = config.tokenBudget > 0 ? (tokensLeft / config.tokenBudget) * 100 : 100;
+  const remainingBudget = { tokensLeft, percentLeft };
+
+  const systemPrompt = buildSystemPrompt(config, reflectPrompt(config, remainingBudget));
   const messages = deps.contextManager.assembleContext({
     iterationStates: allStates,
     currentMessages: [],
@@ -538,11 +574,12 @@ async function executeWithToolLoop(
   messages: MessageParam[],
   tools: ToolUnion[],
 ): Promise<{ output: unknown; tokensUsed: TokenUsage }> {
+  const maxToolTurns = config.maxToolTurns ?? DEFAULT_MAX_TOOL_TURNS;
   let currentMessages = [...messages];
   let totalTokens: TokenUsage = { input: 0, output: 0 };
   let turns = 0;
 
-  while (turns < MAX_TOOL_TURNS) {
+  while (turns < maxToolTurns) {
     logApiCall(config, `execute/turn-${turns}`, currentMessages.length, currentMessages.map(m => m.role), tools.length > 0);
 
     const { response, tokensUsed } = await deps.claudeClient.call({
@@ -602,13 +639,88 @@ async function executeWithToolLoop(
     ];
 
     turns++;
+
+    // Compact old tool turns to reduce context size
+    if (turns >= TOOL_LOOP_COMPACT_AFTER) {
+      currentMessages = compactToolMessages(currentMessages, messages.length);
+    }
   }
 
   // Hit max tool turns
   return {
-    output: `Tool loop terminated after ${MAX_TOOL_TURNS} turns`,
+    output: `Tool loop terminated after ${maxToolTurns} turns`,
     tokensUsed: totalTokens,
   };
+}
+
+// ─── Tool Loop Compaction ─────────────────────────────────────────
+
+/**
+ * Compact old tool call/result pairs in the message array to reduce
+ * context size during long tool loops. Keeps initial context messages
+ * and recent turn pairs intact; summarizes older turns.
+ */
+export function compactToolMessages(
+  messages: MessageParam[],
+  initialMessageCount: number,
+): MessageParam[] {
+  // Split messages into initial context and tool-loop turns
+  const initialMessages = messages.slice(0, initialMessageCount);
+  const toolMessages = messages.slice(initialMessageCount);
+
+  // Tool messages come in pairs: [assistant (tool_use), user (tool_result)]
+  // Count pairs
+  const pairCount = Math.floor(toolMessages.length / 2);
+  if (pairCount <= TOOL_LOOP_KEEP_RECENT) {
+    return messages; // Not enough to compact
+  }
+
+  // Keep last TOOL_LOOP_KEEP_RECENT pairs in full
+  const compactPairCount = pairCount - TOOL_LOOP_KEEP_RECENT;
+  const compactMsgCount = compactPairCount * 2;
+  const toCompact = toolMessages.slice(0, compactMsgCount);
+  const toKeep = toolMessages.slice(compactMsgCount);
+
+  // Summarize compacted turns
+  const summaryLines: string[] = [];
+  for (let i = 0; i < toCompact.length; i += 2) {
+    const turnNum = Math.floor(i / 2) + 1;
+    const assistantMsg = toCompact[i];
+    const userMsg = toCompact[i + 1];
+
+    // Extract tool name from assistant message
+    let toolName = "unknown";
+    if (assistantMsg && Array.isArray(assistantMsg.content)) {
+      const toolBlock = (assistantMsg.content as ContentBlock[]).find(
+        (b: ContentBlock) => b.type === "tool_use",
+      );
+      if (toolBlock && "name" in toolBlock) {
+        toolName = (toolBlock as ToolUseBlock).name;
+      }
+    }
+
+    // Extract result preview from user message
+    let resultPreview = "";
+    if (userMsg && Array.isArray(userMsg.content)) {
+      const resultBlock = (userMsg.content as Array<{ type: string; content?: string }>).find(
+        (b) => b.type === "tool_result",
+      );
+      if (resultBlock?.content) {
+        resultPreview = String(resultBlock.content).slice(0, 150);
+      }
+    }
+
+    summaryLines.push(`Turn ${turnNum}: Called ${toolName} → ${resultPreview}`);
+  }
+
+  const summaryText = `[Compacted ${compactPairCount} tool turns]\n${summaryLines.join("\n")}`;
+
+  return [
+    ...initialMessages,
+    { role: "user" as const, content: summaryText },
+    { role: "assistant" as const, content: "Understood, continuing with the task." },
+    ...toKeep,
+  ];
 }
 
 // ─── Cancellation ────────────────────────────────────────────────
@@ -702,6 +814,9 @@ function buildSystemPrompt(config: AgentConfig, basePrompt: string): string {
     // Leader gets additional context about team management
     const maxWorkers = 6; // Default, could be passed through config
     prompt += "\n\n" + leaderContextPrompt(maxWorkers);
+  } else {
+    // Workers get coordination context
+    prompt += "\n\n" + workerContextPrompt(config);
   }
   return prompt;
 }
