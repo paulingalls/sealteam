@@ -57,6 +57,7 @@ describe("spawn-agent tool", () => {
       defaultBudget: 100000,
       defaultMaxIterations: 50,
       maxWorkers: 6,
+      spawnCommand: [process.execPath, process.argv[1]!, "--agent-mode"],
     };
 
     const handler = createHandler(ctx);
@@ -120,6 +121,7 @@ describe("spawn-agent tool", () => {
       defaultBudget: 100000,
       defaultMaxIterations: 50,
       maxWorkers: 2, // limit to 2
+      spawnCommand: [process.execPath, process.argv[1]!, "--agent-mode"],
     };
 
     const handler = createHandler(ctx);
@@ -141,6 +143,7 @@ describe("spawn-agent tool", () => {
       defaultBudget: 50000,
       defaultMaxIterations: 25,
       maxWorkers: 6,
+      spawnCommand: [process.execPath, process.argv[1]!, "--agent-mode"],
     };
 
     const handler = createHandler(ctx);

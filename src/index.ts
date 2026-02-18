@@ -136,6 +136,21 @@ Environment Variables:
 `);
 }
 
+// ─── Spawn Command Helper ────────────────────────────────────────
+
+/**
+ * Returns the command array to spawn an agent subprocess.
+ * - Compiled binary: ["/path/to/sealteam", "--agent-mode"]
+ * - From source: ["bun", "src/index.ts", "--agent-mode"]
+ */
+export function getSpawnCommand(): string[] {
+  const isCompiled = !process.argv[1]?.endsWith(".ts");
+  if (isCompiled) {
+    return [process.execPath, "--agent-mode"];
+  }
+  return [process.execPath, process.argv[1]!, "--agent-mode"];
+}
+
 // ─── Main Process ────────────────────────────────────────────────
 
 interface AgentProcess {
@@ -335,7 +350,7 @@ function spawnAgent(
     SEALTEAM_MAX_AGENTS: String(options.workers),
   };
 
-  return Bun.spawn(["bun", "src/life-loop.ts"], {
+  return Bun.spawn(getSpawnCommand(), {
     env,
     stdout: "inherit",
     stderr: "inherit",
@@ -424,7 +439,7 @@ async function monitorLoop(
 
           // Kill the process we just started and restart with resume env
           newProc.kill();
-          const resumeProc = Bun.spawn(["bun", "src/life-loop.ts"], {
+          const resumeProc = Bun.spawn(getSpawnCommand(), {
             env,
             stdout: "inherit",
             stderr: "inherit",
@@ -535,7 +550,7 @@ async function runRecovery(options: CLIOptions): Promise<void> {
       ...(resumePoint ? { RESUME_FROM: resumePoint } : {}),
     };
 
-    const proc = Bun.spawn(["bun", "src/life-loop.ts"], {
+    const proc = Bun.spawn(getSpawnCommand(), {
       env,
       stdout: "inherit",
       stderr: "inherit",
@@ -697,17 +712,23 @@ async function syncAgentProcesses(
 // ─── Entry Point ─────────────────────────────────────────────────
 
 if (import.meta.main) {
-  const options = parseCLIArgs(process.argv);
-  const error = validateOptions(options);
+  // When spawned as an agent subprocess, run the life-loop bootstrap
+  if (process.argv.includes("--agent-mode")) {
+    const { bootstrapAgent } = await import("./life-loop.ts");
+    await bootstrapAgent();
+  } else {
+    const options = parseCLIArgs(process.argv);
+    const error = validateOptions(options);
 
-  if (error) {
-    console.error(error);
-    printUsage();
-    process.exit(1);
+    if (error) {
+      console.error(error);
+      printUsage();
+      process.exit(1);
+    }
+
+    main(options).catch((err) => {
+      console.error("Fatal error:", err);
+      process.exit(1);
+    });
   }
-
-  main(options).catch((err) => {
-    console.error("Fatal error:", err);
-    process.exit(1);
-  });
 }

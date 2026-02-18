@@ -63,6 +63,7 @@ export interface SpawnContext {
   defaultBudget: number;
   defaultMaxIterations: number;
   maxWorkers: number;
+  spawnCommand: string[];
 }
 
 /**
@@ -117,7 +118,7 @@ export function createHandler(ctx: SpawnContext) {
     }
 
     // Spawn the subprocess (inherit stdio so agent logs appear in terminal)
-    const proc = Bun.spawn(["bun", "src/life-loop.ts"], {
+    const proc = Bun.spawn(ctx.spawnCommand, {
       env: {
         ...process.env,
         AGENT_CONFIG: JSON.stringify(agentConfig),

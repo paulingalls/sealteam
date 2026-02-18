@@ -874,7 +874,12 @@ function addTokens(a: TokenUsage, b: TokenUsage): TokenUsage {
 
 // ─── Subprocess Entry Point ──────────────────────────────────────
 
-if (import.meta.main) {
+/**
+ * Bootstrap an agent subprocess. Called when running as a subprocess
+ * (either via `bun src/life-loop.ts` or via `sealteam --agent-mode`).
+ * Reads AGENT_CONFIG from env, sets up dependencies, and runs the life loop.
+ */
+export async function bootstrapAgent(): Promise<void> {
   const configJson = process.env.AGENT_CONFIG;
   if (!configJson) {
     console.error("AGENT_CONFIG environment variable is required");
@@ -888,6 +893,12 @@ if (import.meta.main) {
   const messageQueue = new MessageQueue(config.valkeyUrl);
   const toolRegistry = new ToolRegistry();
   const contextManager = new ContextManager(config.model);
+
+  // Determine spawn command for agent subprocesses
+  const isCompiled = !process.argv[1]?.endsWith(".ts");
+  const spawnCommand = isCompiled
+    ? [process.execPath, "--agent-mode"]
+    : [process.execPath, process.argv[1]!, "--agent-mode"];
 
   toolRegistry.loadBuiltins();
   toolRegistry.bindAgentContext({
@@ -904,20 +915,24 @@ if (import.meta.main) {
             defaultBudget: parseInt(process.env.SEALTEAM_DEFAULT_BUDGET ?? "100000", 10),
             defaultMaxIterations: parseInt(process.env.SEALTEAM_DEFAULT_MAX_ITERATIONS ?? "50", 10),
             maxWorkers: parseInt(process.env.SEALTEAM_MAX_AGENTS ?? "6", 10),
+            spawnCommand,
           }
         : undefined,
   });
 
   const deps: LifeLoopDeps = { claudeClient, messageQueue, toolRegistry, contextManager };
 
-  runLifeLoop(config, deps)
-    .then(() => {
-      messageQueue.close();
-      process.exit(0);
-    })
-    .catch((err) => {
-      console.error(`Agent ${config.name} fatal error:`, err);
-      messageQueue.close();
-      process.exit(1);
-    });
+  try {
+    await runLifeLoop(config, deps);
+    messageQueue.close();
+    process.exit(0);
+  } catch (err) {
+    console.error(`Agent ${config.name} fatal error:`, err);
+    messageQueue.close();
+    process.exit(1);
+  }
+}
+
+if (import.meta.main) {
+  bootstrapAgent();
 }
