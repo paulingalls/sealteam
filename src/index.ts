@@ -176,7 +176,7 @@ export async function main(options: CLIOptions): Promise<void> {
     name: "bob",
     role: "Team Leader — break down the user's goal into requirements, plan the team, spawn and manage agents, review their work, and coordinate completion.",
     purpose: `Achieve the following goal by creating and managing a team of AI agents: ${options.goal}`,
-    tools: ["bash", "read-file", "write-file", "web-search", "web-fetch", "spawn-agent", "send-message", "git"],
+    tools: ["bash", "read-file", "write-file", "web-search", "web-fetch", "spawn-agent", "send-message", "git", "create-tool"],
     model: options.leaderModel,
     tokenBudget: options.budget * 2, // Leader gets 2x budget
     maxIterations: options.maxIterations,

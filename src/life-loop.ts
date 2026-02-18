@@ -437,7 +437,10 @@ async function doExecute(
   iteration: number,
 ): Promise<StepResult> {
   const systemPrompt = buildSystemPrompt(config, executePrompt(config, plan));
-  const tools = deps.toolRegistry.getAllToolsForApi(config.tools);
+  // Include dynamic tools alongside the agent's static tool list
+  const dynamicNames = deps.toolRegistry.getDynamicToolNames();
+  const allToolNames = [...new Set([...config.tools, ...dynamicNames])];
+  const tools = deps.toolRegistry.getAllToolsForApi(allToolNames);
   const messages = deps.contextManager.assembleContext({
     iterationStates: allStates,
     currentMessages: [],
@@ -465,7 +468,10 @@ async function doPlanExecute(
   iteration: number,
 ): Promise<StepResult> {
   const systemPrompt = buildSystemPrompt(config, planExecutePrompt(config));
-  const tools = deps.toolRegistry.getAllToolsForApi(config.tools);
+  // Include dynamic tools alongside the agent's static tool list
+  const dynamicNames = deps.toolRegistry.getDynamicToolNames();
+  const allToolNames = [...new Set([...config.tools, ...dynamicNames])];
+  const tools = deps.toolRegistry.getAllToolsForApi(allToolNames);
   const messages = deps.contextManager.assembleContext({
     iterationStates: allStates,
     currentMessages,

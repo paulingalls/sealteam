@@ -16,6 +16,7 @@ import * as webFetchTool from "./tools/web-fetch.ts";
 import * as gitTool from "./tools/git.ts";
 import * as sendMessageTool from "./tools/send-message.ts";
 import * as spawnAgentTool from "./tools/spawn-agent.ts";
+import * as createToolTool from "./tools/create-tool.ts";
 
 /** Names of tools that are handled server-side by the Claude API. */
 const SERVER_TOOL_NAMES = new Set(["web-search", "web-fetch"]);
@@ -58,6 +59,7 @@ export class ToolRegistry {
     this.builtinTools.set("git", gitTool);
     this.builtinTools.set("send-message", sendMessageTool);
     this.builtinTools.set("spawn-agent", spawnAgentTool);
+    this.builtinTools.set("create-tool", createToolTool);
   }
 
   /**
@@ -112,6 +114,15 @@ export class ToolRegistry {
         handler: spawnAgentTool.createHandler(params.spawnContext),
       });
     }
+
+    // Bind create-tool to workspace and this registry
+    this.builtinTools.set("create-tool", {
+      definition: createToolTool.definition,
+      handler: createToolTool.createHandler({
+        workspacePath: params.workspacePath,
+        toolRegistry: this,
+      }),
+    });
   }
 
   /**
@@ -230,6 +241,15 @@ export class ToolRegistry {
       ...this.builtinTools.keys(),
       ...this.dynamicTools.keys(),
     ];
+  }
+
+  /**
+   * Get names of all loaded dynamic tools.
+   * Used by the life loop to include dynamic tools in API calls
+   * regardless of the agent's static tool list.
+   */
+  getDynamicToolNames(): string[] {
+    return [...this.dynamicTools.keys()];
   }
 
   /**

@@ -207,6 +207,17 @@ git checkout --theirs . && git add -A && git commit -m "Merge {name}: resolved c
 - After merging all agents, notify remaining active agents via shared message so they can pull.
 - NEVER start long-running processes (servers, watchers, daemons) via bash — they block indefinitely. Use \`bun test\` to verify, not \`bun run server.js\`.
 
+## Creating Custom Tools
+
+You and your agents have access to the \`create-tool\` tool for creating new reusable tools when the built-in tools are insufficient. Use this when:
+- The task requires capabilities not covered by bash, read-file, write-file, git, or web-search/web-fetch
+- An agent needs a specialized, repeatable operation (e.g., an API client, a data parser, a domain-specific utility)
+- You want a safe, validated alternative to running arbitrary bash commands
+
+Created tools persist in the workspace's \`tools/\` directory and are automatically available to all agents — including in future sessions on the same workspace.
+
+When assigning agents a task that may need custom tools, mention that \`create-tool\` is available and describe when to use it.
+
 ## Final Completion — CRITICAL
 
 When all work is done and merged into main, you MUST send an "all-complete" message to "main":
@@ -243,5 +254,14 @@ When you define an interface or contract, broadcast it. Examples:
 
 **Responding to teammates:**
 - If a teammate messages you with a request, prioritize it — they may be blocked waiting.
-- If you receive a shared message that affects your work, adapt accordingly.`;
+- If you receive a shared message that affects your work, adapt accordingly.
+
+## Creating Custom Tools
+
+If you need a capability not provided by the built-in tools (bash, read-file, write-file, git, send-message, web-search, web-fetch), you can create a new tool using \`create-tool\`. This is useful for:
+- API integrations (e.g., reading email, calling a specific service)
+- Data processing (e.g., parsing CSV, transforming XML)
+- Domain-specific operations that you'll use repeatedly
+
+The tool source must export a \`definition\` and \`handler\`, and include a passing test file. Created tools are validated for security and correctness before activation.`;
 }
