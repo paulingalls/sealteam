@@ -36,7 +36,7 @@ sudo mv sealteam /usr/local/bin/
 sealteam "Build a REST API for a todo app with authentication"
 ```
 
-The compiled binary bundles Bun and all dependencies into a single file — no runtime installation required on the target machine.
+The compiled binary bundles Bun and all dependencies into a single file — no runtime installation required on the target machine. Agent subprocesses are spawned by re-executing the binary with an internal `--agent-mode` flag, so no source files need to be present on disk.
 
 To cross-compile for other platforms:
 
@@ -75,13 +75,18 @@ Agents self-recover from errors (up to 3 attempts) before escalating to the team
 | `spawn-agent` | (Leader only) Spawn a new agent subprocess |
 | `send-message` | Send messages to agents or broadcast to the team |
 | `git` | Execute git commands in the agent's working directory |
+| `create-tool` | Create dynamic tools at runtime with validation |
+| `parse-csv` | Parse CSV data into structured records |
 
-Agents can also create **dynamic tools** at runtime, which go through a validation pipeline (schema check, security scan, test coverage) before activation.
+Agents can also create **dynamic tools** via `create-tool` at runtime, which go through a validation pipeline (schema check, security scan, test coverage) before activation.
 
 ## Usage
 
 ```
 bun run sealteam [options] "<goal>"
+
+# Or if installed as a binary:
+sealteam [options] "<goal>"
 ```
 
 ### Options
@@ -148,7 +153,8 @@ src/
   types.ts              # Shared TypeScript interfaces
   tools/                # Built-in tool implementations
     bash.ts, read-file.ts, write-file.ts, web-search.ts,
-    web-fetch.ts, spawn-agent.ts, send-message.ts, git.ts
+    web-fetch.ts, spawn-agent.ts, send-message.ts, git.ts,
+    create-tool.ts, parse-csv.ts
 ```
 
 ## Testing
@@ -157,7 +163,7 @@ src/
 bun test
 ```
 
-195 tests across 17 files covering all modules.
+231 tests across 19 files covering all modules.
 
 ## Crash Recovery
 
